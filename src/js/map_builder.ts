@@ -27,7 +27,6 @@ import { getGlobalStateForLocalization } from "@americana/diplomat";
 function getKabyleLocales(): string[] {
   return ["kab"];
 }
-
 export function buildStyle(): StyleSpecification {
   var getUrl = window.location;
   var baseUrl = (
@@ -40,7 +39,7 @@ export function buildStyle(): StyleSpecification {
   return Style.build(
     config.OPENMAPTILES_URL,
     `${baseUrl}/sprites/sprite`,
-    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf`,
+    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf",
     getKabyleLocales()
   );
 }
