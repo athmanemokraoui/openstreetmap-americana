@@ -1,112 +1,130 @@
-/**
- * Functions for assembling user-facing map components
- */
-import {
-  ShieldDefinitions,
-  URLShieldRenderer,
-} from "@americana/maplibre-shield-generator";
-import config from "../config.js";
+"use strict";
 
-import {
-  shieldPredicate,
-  networkPredicate,
-  routeParser,
-} from "../js/shield_format.js";
+import config from "./config.js";
 
-import * as Poi from "../js/poi.js";
-import * as Style from "./style.js";
-import maplibregl, {
-  type MapOptions,
-  type StyleSpecification,
-} from "maplibre-gl";
-import { MapView } from "./map_view.js";
-import type { DebugOptions } from "@americana/maplibre-shield-generator/src/types.js";
-import { getGlobalStateForLocalization } from "@americana/diplomat";
+// REMOVED: import { LanguageControl } from "./js/language_control.js";
 
-// REMOVED: import { getLocales } from "@americana/diplomat";
-// We will define our own Kabyle-only locale function
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import * as search from "./search.js";
 
-// ADDED: Force Kabyle locale, ignore browser detection
-function getKabyleLocales(): string[] {
-  return ["kab"];
-}
+import LegendControl from "./js/legend_control.js";
+import { HillshadeControl } from "./js/hillshade_control.js";
+import * as LegendConfig from "./js/legend_config.js";
+import SampleControl from "openmapsamples-maplibre/OpenMapSamplesControl.js";
+import { default as OpenMapTilesSamples } from "openmapsamples/samples/OpenMapTiles/index.js";
 
-export function buildStyle(): StyleSpecification {
-  var getUrl = window.location;
-  var baseUrl = (
-    getUrl.protocol +
-    "//" +
-    getUrl.host +
-    removeAfterLastSlash(getUrl.pathname)
-  )
-    //Trim trailing slashes from URL
-    .replace(/\/+$/, "");
-  return Style.build(
-    config.OPENMAPTILES_URL,
-    `${baseUrl}/sprites/sprite`,
-    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf`,
-    // CHANGED: Use Kabyle-only locales instead of browser detection
-    getKabyleLocales()
-  );
-}
+import { createMap, loadRTLPlugin, buildStyle } from "./js/map_builder.js";
+import { debugOptions } from "./debug_config.js";
 
-function removeAfterLastSlash(str: string): string {
-  const lastSlashIndex = str.lastIndexOf("/");
-  if (lastSlashIndex === -1) {
-    return str; // return the original string if no slash is found
+function upgradeLegacyHash() {
+  let hash = window.location.hash.substr(1);
+  if (!hash.includes("=")) {
+    hash = `#map=${hash}`;
   }
-  return str.substring(0, lastSlashIndex + 1);
+  window.location.hash = hash;
 }
+upgradeLegacyHash();
 
-export function loadRTLPlugin(): void {
-  maplibregl.setRTLTextPlugin(
-    "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.2.3/mapbox-gl-rtl-text.min.js",
-    true
-  );
-}
+loadRTLPlugin();
 
-export function createMap(
-  window: Window,
-  shieldDefCallback: (shields: ShieldDefinitions) => void,
-  options: MapOptions,
-  debugOptions: DebugOptions
-): MapView {
-  window["maplibregl"] = maplibregl;
-  let map: MapView = (window["map"] = new MapView(options));
+export const map = createMap(
+  window,
+  (shields) => shieldDefLoad(shields),
+  {
+    container: "map",
+    hash: "map",
+    antialias: true,
+    style: buildStyle(),
+    center: [4.0, 36.7], // Kabylia
+    zoom: 8,
+    attributionControl: false,
+    experimentalZoomLevelsToOverscale: 0,
+  },
+  debugOptions
+);
 
-  const shieldRenderer = new URLShieldRenderer("shields.json", routeParser)
-    .debugOptions(debugOptions)
-    .filterImageID(shieldPredicate)
-    .filterNetwork(networkPredicate)
-    .renderOnMaplibreGL(map)
-    .onShieldDefLoad(shieldDefCallback);
+// Add our sample data.
+let sampleControl = new SampleControl({ permalinks: true });
+OpenMapTilesSamples.forEach((sample, i) => {
+  sampleControl.addSample(sample);
+});
 
-  map.once("styledata", (event) => {
-    // CHANGED: Force Kabyle with no dual labels (glossLocalNames: false)
-    let localizationState = getGlobalStateForLocalization(
-      getKabyleLocales(), // Force Kabyle only
-      {
-        uppercaseCountryNames: true,
-        // ADDED: Disable dual language labels - show ONLY Kabyle
-        glossLocalNames: false,
-      }
+let legendControl;
+
+function shieldDefLoad(shields) {
+  legendControl = new LegendControl(shields);
+  legendControl.sections = LegendConfig.sections;
+  map.addControl(legendControl, "bottom-left");
+  map.addControl(sampleControl, "bottom-left");
+
+  if (window.top === window.self) {
+    map.getCanvas().focus();
+  }
+
+  // REMOVED: LanguageControl - no language picker needed
+
+  // ADDED: Kabyle badge
+  const kabBadge = document.createElement("div");
+  kabBadge.textContent = "Taqbaylit";
+  kabBadge.style.cssText =
+    "position:absolute;bottom:40px;right:10px;background:#0078d4;color:white;padding:6px 12px;border-radius:4px;z-index:1000;font-family:sans-serif;font-size:13px;font-weight:bold;pointer-events:none;";
+  document.getElementById("map").appendChild(kabBadge);
+
+  map.addControl(new maplibregl.AttributionControl(attributionConfig));
+
+  map.addControl(new search.PhotonSearchControl(), "top-left");
+  map.addControl(new maplibregl.NavigationControl(), "top-left");
+  map.addControl(new maplibregl.GlobeControl(), "top-left");
+  map.addControl(new HillshadeControl(), "top-left");
+
+  // REMOVED: languagechange listener
+
+  window.addEventListener("hashchange", (event) => {
+    upgradeLegacyHash();
+    hashChanged(new URL(event.oldURL), new URL(event.newURL));
+  });
+
+  map.once("styledata", () => {
+    hashChanged(null, window.location);
+  });
+
+  if (window.LIVE_RELOAD) {
+    new EventSource("/esbuild").addEventListener("change", () =>
+      location.reload()
     );
-    for (let [key, value] of Object.entries(localizationState)) {
-      map.setGlobalStateProperty(key, value);
-    }
-  });
+  }
+}
 
-  map.on("styleimagemissing", function (e) {
-    switch (e.id.split("\n")[0]) {
-      case "shield":
-        break;
-      case "poi":
-        Poi.missingIconHandler(shieldRenderer, map, e);
-        break;
-      default:
-        console.warn("Image id not recognized:", JSON.stringify(e.id));
-        break;
-    }
-  });
-  return map;
+function hashChanged(oldURL, newURL) {
+  const oldParams = new URLSearchParams(oldURL?.hash.substr(1));
+  const newParams = new URLSearchParams(newURL.hash.substr(1));
+
+  // REMOVED: language param check
+
+  if (
+    (oldParams.get("projection") || null) !==
+    (newParams.get("projection") || null)
+  ) {
+    map.setProjection({ type: newParams.get("projection") || "mercator" });
+  }
+
+  if (oldParams.has("terrain") !== newParams.has("terrain")) {
+    map.shadesHills = newParams.has("terrain");
+  }
+}
+
+let attributionConfig = {
+  customAttribution: "",
+};
+
+if (config.ATTRIBUTION_TEXT != undefined) {
+  attributionConfig = {
+    customAttribution: config.ATTRIBUTION_TEXT,
+  };
+}
+
+if (config.ATTRIBUTION_LOGO != undefined) {
+  document.getElementById("attribution-logo").innerHTML =
+    config.ATTRIBUTION_LOGO;
 }
