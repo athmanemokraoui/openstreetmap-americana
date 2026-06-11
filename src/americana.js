@@ -16,9 +16,9 @@ import { createMap, loadRTLPlugin, buildStyle } from "./js/map_builder.js";
 import { debugOptions } from "./debug_config.js";
 
 function upgradeLegacyHash() {
-  let hash = window.location.hash.substr(1);
+  let hash = window.location.hash.substr(1); // Removes the leading "#"
   if (!hash.includes("=")) {
-    hash = `#map=${hash}`;
+    hash = `#map=${hash}`; // Adds "#map=" prefix
   }
   window.location.hash = hash;
 }
