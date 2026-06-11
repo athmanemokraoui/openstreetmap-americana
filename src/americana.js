@@ -2,8 +2,6 @@
 
 import config from "./config.js";
 
-import { LanguageControl } from "./js/language_control.js";
-
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as search from "./search.js";
@@ -18,9 +16,9 @@ import { createMap, loadRTLPlugin, buildStyle } from "./js/map_builder.js";
 import { debugOptions } from "./debug_config.js";
 
 function upgradeLegacyHash() {
-  let hash = window.location.hash.substr(1);
+  let hash = window.location.hash.substr(1); // Removes the leading "#"
   if (!hash.includes("=")) {
-    hash = `#map=${hash}`;
+    hash = `#map=${hash}`; // Adds "#map=" prefix
   }
   window.location.hash = hash;
 }
@@ -32,19 +30,18 @@ export const map = createMap(
   window,
   (shields) => shieldDefLoad(shields),
   {
-    container: "map", // container id
+    container: "map",
     hash: "map",
     antialias: true,
     style: buildStyle(),
-    center: [-94, 40.5],
-    zoom: 4,
+    center: [4.0, 36.7], // Kabylia
+    zoom: 8,
     attributionControl: false,
     experimentalZoomLevelsToOverscale: 0,
   },
   debugOptions
 );
 
-// Add our sample data.
 let sampleControl = new SampleControl({ permalinks: true });
 OpenMapTilesSamples.forEach((sample, i) => {
   sampleControl.addSample(sample);
@@ -59,22 +56,22 @@ function shieldDefLoad(shields) {
   map.addControl(sampleControl, "bottom-left");
 
   if (window.top === window.self) {
-    // if not embedded in an iframe, autofocus canvas to enable keyboard shortcuts
     map.getCanvas().focus();
   }
 
-  const languageControl = new LanguageControl();
+  // Kabyle badge instead of language picker
+  const kabBadge = document.createElement("div");
+  kabBadge.textContent = "Taqbaylit";
+  kabBadge.style.cssText =
+    "position:absolute;bottom:40px;right:10px;background:#0078d4;color:white;padding:6px 12px;border-radius:4px;z-index:1000;font-family:sans-serif;font-size:13px;font-weight:bold;pointer-events:none;";
+  document.getElementById("map").appendChild(kabBadge);
+
   map.addControl(new maplibregl.AttributionControl(attributionConfig));
-  map.addControl(languageControl, "bottom-right");
 
   map.addControl(new search.PhotonSearchControl(), "top-left");
   map.addControl(new maplibregl.NavigationControl(), "top-left");
   map.addControl(new maplibregl.GlobeControl(), "top-left");
   map.addControl(new HillshadeControl(), "top-left");
-
-  window.addEventListener("languagechange", (event) => {
-    map.localize();
-  });
 
   window.addEventListener("hashchange", (event) => {
     upgradeLegacyHash();
@@ -95,12 +92,6 @@ function shieldDefLoad(shields) {
 function hashChanged(oldURL, newURL) {
   const oldParams = new URLSearchParams(oldURL?.hash.substr(1));
   const newParams = new URLSearchParams(newURL.hash.substr(1));
-
-  if (
-    (oldParams.get("language") || null) !== (newParams.get("language") || null)
-  ) {
-    map.localize();
-  }
 
   if (
     (oldParams.get("projection") || null) !==
