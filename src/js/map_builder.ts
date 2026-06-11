@@ -30,26 +30,17 @@ function getKabyleLocales(): string[] {
 
 export function buildStyle(): StyleSpecification {
   var getUrl = window.location;
-  
-  // FIXED: Handle GitHub Pages subdirectory correctly
-  // For https://athmanemokraoui.github.io/openstreetmap-americana/
-  // baseUrl should be /openstreetmap-americana/
-  var pathName = getUrl.pathname;
-  
-  // Ensure we keep the repo subdirectory for GitHub Pages
   var baseUrl = (
     getUrl.protocol +
     "//" +
     getUrl.host +
-    removeAfterLastSlash(pathName)
+    removeAfterLastSlash(getUrl.pathname)
   )
-    // Trim trailing slashes from URL
     .replace(/\/+$/, "");
-  
   return Style.build(
     config.OPENMAPTILES_URL,
     `${baseUrl}/sprites/sprite`,
-    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf",
+    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf`,
     getKabyleLocales()
   );
 }
@@ -90,7 +81,7 @@ export function createMap(
       getKabyleLocales(),
       {
         uppercaseCountryNames: true,
-        glossLocalNames: false, // Show ONLY Kabyle, no dual labels
+        glossLocalNames: false, // ONLY Kabyle, no dual labels
       }
     );
     for (let [key, value] of Object.entries(localizationState)) {
