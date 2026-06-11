@@ -27,6 +27,7 @@ import { getGlobalStateForLocalization } from "@americana/diplomat";
 function getKabyleLocales(): string[] {
   return ["kab"];
 }
+
 export function buildStyle(): StyleSpecification {
   var getUrl = window.location;
   var baseUrl = (
@@ -34,12 +35,12 @@ export function buildStyle(): StyleSpecification {
     "//" +
     getUrl.host +
     removeAfterLastSlash(getUrl.pathname)
-  )
-    .replace(/\/+$/, "");
+  ).replace(/\/+$/, "");
   return Style.build(
     config.OPENMAPTILES_URL,
     `${baseUrl}/sprites/sprite`,
-    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf",
+    config.FONT_URL ??
+      "https://font.americanamap.org/{fontstack}/{range}.pbf",
     getKabyleLocales()
   );
 }
@@ -76,13 +77,10 @@ export function createMap(
     .onShieldDefLoad(shieldDefCallback);
 
   map.once("styledata", (event) => {
-    let localizationState = getGlobalStateForLocalization(
-      getKabyleLocales(),
-      {
-        uppercaseCountryNames: true,
-        glossLocalNames: false, // ONLY Kabyle, no dual labels
-      }
-    );
+    let localizationState = getGlobalStateForLocalization(getKabyleLocales(), {
+      uppercaseCountryNames: true,
+      glossLocalNames: false, // ONLY Kabyle, no dual labels
+    });
     for (let [key, value] of Object.entries(localizationState)) {
       map.setGlobalStateProperty(key, value);
     }
