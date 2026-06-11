@@ -21,7 +21,15 @@ import maplibregl, {
 } from "maplibre-gl";
 import { MapView } from "./map_view.js";
 import type { DebugOptions } from "@americana/maplibre-shield-generator/src/types.js";
-import { getGlobalStateForLocalization, getLocales } from "@americana/diplomat";
+import { getGlobalStateForLocalization } from "@americana/diplomat";
+
+// REMOVED: import { getLocales } from "@americana/diplomat";
+// We will define our own Kabyle-only locale function
+
+// ADDED: Force Kabyle locale, ignore browser detection
+function getKabyleLocales(): string[] {
+  return ["kab"];
+}
 
 export function buildStyle(): StyleSpecification {
   var getUrl = window.location;
@@ -36,8 +44,9 @@ export function buildStyle(): StyleSpecification {
   return Style.build(
     config.OPENMAPTILES_URL,
     `${baseUrl}/sprites/sprite`,
-    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf",
-    getLocales()
+    config.FONT_URL ?? "https://font.americanamap.org/{fontstack}/{range}.pbf`,
+    // CHANGED: Use Kabyle-only locales instead of browser detection
+    getKabyleLocales()
   );
 }
 
@@ -73,9 +82,15 @@ export function createMap(
     .onShieldDefLoad(shieldDefCallback);
 
   map.once("styledata", (event) => {
-    let localizationState = getGlobalStateForLocalization(getLocales(), {
-      uppercaseCountryNames: true,
-    });
+    // CHANGED: Force Kabyle with no dual labels (glossLocalNames: false)
+    let localizationState = getGlobalStateForLocalization(
+      getKabyleLocales(), // Force Kabyle only
+      {
+        uppercaseCountryNames: true,
+        // ADDED: Disable dual language labels - show ONLY Kabyle
+        glossLocalNames: false,
+      }
+    );
     for (let [key, value] of Object.entries(localizationState)) {
       map.setGlobalStateProperty(key, value);
     }
