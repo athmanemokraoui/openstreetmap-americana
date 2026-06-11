@@ -2,9 +2,6 @@
 
 import config from "./config.js";
 
-// REMOVED: import { LanguageControl } from "./js/language_control.js";
-// We no longer need the language picker UI - locked to Kabyle
-
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as search from "./search.js";
@@ -33,12 +30,11 @@ export const map = createMap(
   window,
   (shields) => shieldDefLoad(shields),
   {
-    container: "map", // container id
+    container: "map",
     hash: "map",
     antialias: true,
     style: buildStyle(),
-    // CHANGED: Center on Kabylia (Algeria) instead of USA
-    center: [4.0, 36.7],
+    center: [4.0, 36.7], // Kabylia, Algeria
     zoom: 8,
     attributionControl: false,
     experimentalZoomLevelsToOverscale: 0,
@@ -46,7 +42,6 @@ export const map = createMap(
   debugOptions
 );
 
-// Add our sample data.
 let sampleControl = new SampleControl({ permalinks: true });
 OpenMapTilesSamples.forEach((sample, i) => {
   sampleControl.addSample(sample);
@@ -61,23 +56,16 @@ function shieldDefLoad(shields) {
   map.addControl(sampleControl, "bottom-left");
 
   if (window.top === window.self) {
-    // if not embedded in an iframe, autofocus canvas to enable keyboard shortcuts
     map.getCanvas().focus();
   }
 
-  // REMOVED: Language picker UI control
-  // const languageControl = new LanguageControl();
-  // map.addControl(new maplibregl.AttributionControl(attributionConfig));
-  // map.addControl(languageControl, "bottom-right");
-
-  // ADDED: Static Kabyle badge instead of language picker
+  // Kabyle language badge
   const kabBadge = document.createElement("div");
   kabBadge.textContent = "Taqbaylit";
   kabBadge.style.cssText =
     "position:absolute;bottom:40px;right:10px;background:#0078d4;color:white;padding:6px 12px;border-radius:4px;z-index:1000;font-family:sans-serif;font-size:13px;font-weight:bold;pointer-events:none;";
   document.getElementById("map").appendChild(kabBadge);
 
-  // Keep attribution control
   map.addControl(new maplibregl.AttributionControl(attributionConfig));
 
   map.addControl(new search.PhotonSearchControl(), "top-left");
@@ -85,23 +73,12 @@ function shieldDefLoad(shields) {
   map.addControl(new maplibregl.GlobeControl(), "top-left");
   map.addControl(new HillshadeControl(), "top-left");
 
-  // REMOVED: Browser language change listener - locked to Kabyle
-  // window.addEventListener("languagechange", (event) => {
-  //   map.localize();
-  // });
-
   window.addEventListener("hashchange", (event) => {
     upgradeLegacyHash();
     hashChanged(new URL(event.oldURL), new URL(event.newURL));
   });
 
-  // ADDED: Force Kabyle localization once style is loaded
-  // glossLocalNames: false = show ONLY Kabyle, no secondary local labels
   map.once("styledata", () => {
-    // Force Kabyle only - no dual labels
-    if (typeof map.localize === "function") {
-      map.localize(["kab"], { glossLocalNames: false });
-    }
     hashChanged(null, window.location);
   });
 
@@ -115,13 +92,6 @@ function shieldDefLoad(shields) {
 function hashChanged(oldURL, newURL) {
   const oldParams = new URLSearchParams(oldURL?.hash.substr(1));
   const newParams = new URLSearchParams(newURL.hash.substr(1));
-
-  // REMOVED: Language parameter check - we are locked to Kabyle
-  // if (
-  //   (oldParams.get("language") || null) !== (newParams.get("language") || null)
-  // ) {
-  //   map.localize();
-  // }
 
   if (
     (oldParams.get("projection") || null) !==
