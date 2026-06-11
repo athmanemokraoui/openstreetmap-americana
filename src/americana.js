@@ -34,7 +34,7 @@ export const map = createMap(
     hash: "map",
     antialias: true,
     style: buildStyle(),
-    center: [4.0, 36.7], // Kabylia, Algeria
+    center: [4.0, 36.7], // Kabylia
     zoom: 8,
     attributionControl: false,
     experimentalZoomLevelsToOverscale: 0,
@@ -59,7 +59,7 @@ function shieldDefLoad(shields) {
     map.getCanvas().focus();
   }
 
-  // Kabyle language badge
+  // Kabyle badge instead of language picker
   const kabBadge = document.createElement("div");
   kabBadge.textContent = "Taqbaylit";
   kabBadge.style.cssText =
